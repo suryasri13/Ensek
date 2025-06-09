@@ -86,9 +86,9 @@ namespace Ensek.Tests
 
             foreach (var order in orders)
             {
-                Assert.That(order.Quantity > 0, "Quantity must be positive.");
-                Assert.That(!string.IsNullOrWhiteSpace(order.Fuel), "Fuel is missing.");
-                Assert.That(order.CreatedAt <= DateTime.UtcNow, "Order has future timestamp.");
+                Assert.That(order.Quantity > 0, "CountOrdersBeforeNow: Quantity must be positive.");
+                Assert.That(!string.IsNullOrWhiteSpace(order.Fuel), "CountOrdersBeforeNow: Fuel is missing.");
+                Assert.That(order.CreatedAt <= DateTime.UtcNow, "CountOrdersBeforeNow: Order has future timestamp.");
             }
         }
 
@@ -97,7 +97,6 @@ namespace Ensek.Tests
         {
             // Buy a valid order first
             var client = new RestClient("https://qacandidatetest.ensek.io/");
-            //api.Login("test", "testing");
             var request = api.CreateRequest("/ENSEK/buy/1/1", Method.Put);
             var response = client.Execute(request);
 
@@ -106,11 +105,11 @@ namespace Ensek.Tests
 
             // Delete the order
             var deleteResponse = api.DeleteOrder(orderId);
-            Assert.That(deleteResponse.IsSuccessful, "DELETE /ENSEK/orders/{id} failed.");
+            Assert.That(deleteResponse.IsSuccessful, "DeleteOrder_ShouldRemoveOrder: DELETE /ENSEK/orders/{id} failed.");
 
             // Confirm it's gone
             var ordersResponse = api.GetOrders();
-            Assert.That(!ordersResponse.Content.Contains(orderId), "Order still exists after deletion.");
+            Assert.That(!ordersResponse.Content.Contains(orderId), "DeleteOrder_ShouldRemoveOrder: Order still exists after deletion.");
         }
 
         //Negative scenarios
@@ -123,7 +122,7 @@ namespace Ensek.Tests
 
             var response = client.Execute(request);
 
-            Assert.That((int)response.StatusCode, Is.EqualTo(401), "Expected 401 Unauthorized for invalid login.");
+            Assert.That((int)response.StatusCode, Is.EqualTo(401), "InvalidLogin_ShouldReturn401: Expected 401 Unauthorized for invalid login.");
         }
 
         [Test, Order(8)]
@@ -135,10 +134,22 @@ namespace Ensek.Tests
 
             var response = client.Execute(request);
 
-            Assert.That(response.StatusCode == HttpStatusCode.NotFound, "Expected 404 error for invalid fuel ID.");
+            Assert.That(response.StatusCode == HttpStatusCode.NotFound, "BuyFuel_InvalidEnergyId_ShouldReturn404: Expected 404 error for invalid fuel ID.");
         }
 
         [Test, Order(9)]
+        public void BuyFuel_InvalidQuantity_ShouldReturn404()
+        {
+            var client = new RestClient("https://qacandidatetest.ensek.io/");
+            api.Login("test", "testing");
+            var request = api.CreateRequest("/ENSEK/order/buy/1/a", Method.Put);
+
+            var response = client.Execute(request);
+
+            Assert.That(response.StatusCode == HttpStatusCode.NotFound, "BuyFuel_InvalidQuantity_ShouldReturn404: Expected 404 error for invalid fuel quantity.");
+        }
+
+        [Test, Order(10)]
         public void ResetData_InvalidAuthToken_ShouldReturnError()
         {
             var client = new RestClient("https://qacandidatetest.ensek.io/");
@@ -149,7 +160,7 @@ namespace Ensek.Tests
             Assert.That(response.StatusCode == HttpStatusCode.Unauthorized, "Expected 401 as auth failed before calling POST /Ensek/reset");
         }
 
-        [Test, Order(10)]
+        [Test, Order(11)]
         public void ResetData_NoAuthToken_ShouldReturnError()
         {
             var client = new RestClient("https://qacandidatetest.ensek.io/");
@@ -157,7 +168,7 @@ namespace Ensek.Tests
 
             var response = client.Execute(request);
 
-            Assert.That(response.StatusCode == HttpStatusCode.Unauthorized, "Expected 401 as no auth before calling POST /Ensek/reset");
+            Assert.That(response.StatusCode == HttpStatusCode.Unauthorized, "ResetData_NoAuthToken_ShouldReturnError: Expected 401 as no auth before calling POST /Ensek/reset");
         }
     }
 }
